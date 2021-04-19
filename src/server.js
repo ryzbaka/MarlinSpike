@@ -5,9 +5,12 @@ const app = express();
 const http = require('http')
 const bodyParser = require('body-parser');
 const path = require("path");
+const favicon = require('serve-favicon');
 
+// app.use(favicon(__dirname + '/public/images/favicon.ico'));
 app.use(bodyParser.json());
 app.use(express.static(__dirname+"/public/"));
+app.use(express.favicon("pubilc/images/favicon.ico")); 
 const server = http.createServer(app);
 const io = require('socket.io')(server);
 
