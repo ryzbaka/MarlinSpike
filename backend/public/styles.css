@@ -7,3 +7,11 @@
 body{
     background-color: black;
 }
+p{
+    font-family: monospace;
+    font-size: smaller;
+}
+nav{
+    opacity: 0.7;
+    /* fill-opacity: 0; */
+}
