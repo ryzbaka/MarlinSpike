@@ -8,6 +8,7 @@ const path = require("path");
 
 app.use(bodyParser.json());
 app.use(express.static(__dirname+"/public/"));
+app.use("/favicon.ico",express.static("favicon.ico"));
 const server = http.createServer(app);
 const io = require('socket.io')(server);
 
