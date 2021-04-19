@@ -1,0 +1,9 @@
+*{
+    box-sizing: border-box;
+}
+/* canvas{
+    z-index:-1
+} */
+body{
+    background-color: black;
+}
