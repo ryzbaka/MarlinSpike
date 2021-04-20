@@ -15,3 +15,15 @@ nav{
     opacity: 0.7;
     /* fill-opacity: 0; */
 }
+#username{
+    color: white;
+}
+#password{
+    color:white;
+}
+#password2{
+    color:white;
+}
+.submit-button{
+    opacity: 0.7;
+}

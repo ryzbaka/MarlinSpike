@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"></script>
+    <link rel = "stylesheet" href = "styles.css"/>
+</head>
+<body>
+    <nav>
+        <div class="black nav-wrapper">
+          <a href="/" class="brand-logo">Marlinspike 🐟</a>
+          <ul id="nav-mobile" class="right hide-on-med-and-down">
+            <li><a class="btn black waves-effect waves-light hoverable" href="/signin">Sign In</a></li>
+            
+            <!-- <li><a href="">Sign In</a></li> -->
+          </ul>
+        </div>
+        <div id="main-container">
+
+        </div>
+    </nav>
+    <div class="main-container">
+        <div class="form-container container">
+            <form>
+                <div class="input-field col s6">
+                    <input id="username" type="text">
+                    <label for="username">Username</label>
+                </div>
+                <div class="input-field col s6">
+                    <input id="password" type="password">
+                    <label for="password">Password</label>
+                </div>
+                <div class="input-field col s6">
+                    <input id="password2" type="password">
+                    <label for="password">Re-Type Password</label>
+                </div>
+            </form>
+            <button class="black btn hoverable waves-effect waves-light submit-button">Submit</button>
+        </div>
+        
+    </div>
+    <script src="sketch.js"></script>
+    <!-- <script src="signuplogic.js"></script> -->
+    <script src ="signupbundle.js"></script>
+</body>
+</html>

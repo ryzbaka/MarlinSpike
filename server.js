@@ -1,5 +1,4 @@
 const PORT = 2300;
-
 const express = require('express');
 const app = express();
 const http = require('http')
@@ -18,14 +17,26 @@ require("dotenv").config({path: path.join(__dirname,".env")});
 
 //ROUTES FOR SERVING HTML FILES
 app.get("/",(req,res)=>{
-	res.sendFile(path.join(__dirname,"index.html"));
+	res.sendFile(path.join(__dirname,"/pages/index.html"));
+})
+app.get("/signup",(req,res)=>{
+	res.sendFile(path.join(__dirname,"/pages/signup.html"));
+})
+app.get("/signin",(req,res)=>{
+	res.sendFile(path.join(__dirname,"/pages/signin.html"));
+})
+app.get("/profile",(req,res)=>{
+	res.sendFile(path.join(__dirname,"/pages/profile.html"));
 })
 //
 //ROUTES FOR INTERACTING WITH MONGODB
 app.post("/users/signup",async ({body:{username,password}},res)=>{
+	/*
+	SIGN UP 
+	*/
 	User.findOne({username:username},"username").exec((err,resultant)=>{
 		if(resultant){
-			res.send("Username already exists")
+			res.json({message:"Username already exists",messagetype:"error"})
 		}else{
 			bcrypt.genSalt(10,(err,salt)=>{
 				bcrypt.hash(password,salt,(err,hash)=>{
@@ -33,14 +44,25 @@ app.post("/users/signup",async ({body:{username,password}},res)=>{
 						username:username,
 						hash:hash
 					});
-					newUser.save().then(()=>res.send("User created.")).catch(err=>res.send(err))
+					newUser.save().then(()=>res.json({message:"User created",messagetype:"success"})).catch(err=>res.send(err))
 				})
 			});
-			// const newUser = new User({
-			// 	username:username,
-			// 	hash:password
-			// });
-			// newUser.save().then(()=>res.send("User created.")).catch(err=>res.send(err));
+		}
+	})
+})
+
+app.post("/users/signin",async ({body:{username,password}},res)=>{
+	User.findOne({username:username}).exec(async (err,resultant)=>{
+		if(resultant){
+			const {hash} = resultant;
+			const authenticationSuccessful = await bcrypt.compare(password,hash);
+			if(authenticationSuccessful){
+				res.json({message:"Authentication successful.",messagetype:"success"})
+			}else{
+				res.json({message:"Authentication failed.",messagetype:"error"})
+			}
+		}else{
+			res.send("User doesn't exist.")
 		}
 	})
 })
