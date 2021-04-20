@@ -60,9 +60,9 @@ function Boid(x, y) {
   this.r = 4.0;
   this.maxspeed = 3;    // Maximum speed
   this.maxforce = 0.05; // Maximum steering force
-  this.red =random(150);
+  this.red =random(255);
   this.green = random(150);
-  this.blue = random(255);
+  this.blue = random(100);
 }
 
 Boid.prototype.run = function(boids) {

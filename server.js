@@ -62,7 +62,7 @@ app.post("/users/signin",async ({body:{username,password}},res)=>{
 				res.json({message:"Authentication failed.",messagetype:"error"})
 			}
 		}else{
-			res.send("User doesn't exist.")
+			res.json({message:"Authentication failed.",messagetype:"error"})
 		}
 	})
 })
