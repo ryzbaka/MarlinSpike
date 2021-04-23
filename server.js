@@ -8,8 +8,10 @@ const mongoose = require('mongoose');
 const bcrypt = require("bcryptjs");
 const server = http.createServer(app);
 const io = require('socket.io')(server);
-app.use(express.static(__dirname+"/public/"));
+const helmet = require("helmet");
 
+app.use(express.static(__dirname+"/public/"));
+// app.use(helmet()) -> currently uncommenting this line effects website's access to js libraries the website is using through CDNs.
 const User = require("./models/Users");
 
 app.use(bodyParser.json());

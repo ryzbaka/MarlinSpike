@@ -1,6 +1,6 @@
 
 let flock;
-
+let beat=false
 function setup() {
   const backgroundSketch = createCanvas(windowWidth,windowHeight);
 //   createP("Drag the mouse to generate new boids.");
@@ -60,9 +60,9 @@ function Boid(x, y) {
   this.r = 4.0;
   this.maxspeed = 3;    // Maximum speed
   this.maxforce = 0.05; // Maximum steering force
-  this.red =random(255);
+  this.red =random(150);
   this.green = random(150);
-  this.blue = random(100);
+  this.blue = random(255);
 }
 
 Boid.prototype.run = function(boids) {
@@ -126,6 +126,7 @@ Boid.prototype.render = function() {
   translate(this.position.x, this.position.y);
   rotate(theta);
   beginShape();
+  // this.r=random(4,5)
   vertex(0, -this.r * 5);
   vertex(-this.r, this.r * 5);
   vertex(this.r, this.r * 5);
