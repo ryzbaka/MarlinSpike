@@ -20,7 +20,8 @@
     "helmet": "^4.5.0",
     "mongoose": "^5.12.4",
     "serve-favicon": "^2.5.0",
-    "socket.io": "^4.0.0"
+    "socket.io": "^4.0.0",
+    "sweetalert2": "^10.16.7"
   },
   "devDependencies": {
     "nodemon": "^2.0.7"
