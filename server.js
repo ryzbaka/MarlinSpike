@@ -18,6 +18,7 @@ app.use(helmet.frameguard());
 app.use(express.static(__dirname+"/public/"));
 // app.use(helmet()) -> currently uncommenting this line effects website's access to js libraries the website is using through CDNs.
 const User = require("./models/Users");
+const Conversation = require("./models/Conversations");
 
 app.use(bodyParser.json());
 require("dotenv").config({path: path.join(__dirname,".env")});
@@ -95,23 +96,28 @@ app.post("/users/checkExists",async ({body:{username}},res)=>{
 	})
 })
 
-app.post("/users/addContact",async ({body:{user1,user2}},res)=>{
-	//Add user to contacts of both user1 and user2
-	console.log(`User1 : ${user1}`);
-	console.log(`User2 : ${user2}`);
-	// console.log("lmao.")
-	User.findOne({username:user1}).exec((err,resultant)=>{
-		if(resultant){
-			resultant.contacts.push(user2);
-			resultant.save();
+app.post("/users/addContact",async ({body:{user1,user2,flush}},res)=>{
+	const user1_contacts = await User.findOne({username:user1});
+	const user2_contacts = await User.findOne({username:user2});
+	// user1_contacts.contacts.push(user2);
+	// user2_contacts.contacts.push(user1);
+	if(flush){
+		user1_contacts.contacts = [];
+		user2_contacts.contacts = [];
+	}else{
+	if(!user1_contacts.contacts.includes(user2)){
+		user1_contacts.contacts.push(user2);
+		user2_contacts.contacts.push(user1);
+		const newConversation = new Conversation({
+			participants :[user1,user2].sort(),
+			log:[]
+		})
+		console.log(newConversation)
+		newConversation.save();
 		}
-	});
-	User.findOne({username:user2}).exec((err,resultant)=>{
-		if(resultant){
-			resultant.contacts.push(user1);
-			resultant.save();
-		}
-	});
+	}
+	user1_contacts.save()
+	user2_contacts.save()
 	res.json({message:"Done.",type:"success"})
 })
 
@@ -124,6 +130,31 @@ app.post("/users/getContacts",({body:{username}},res)=>{
 			res.json({message:"Fetched contacts",type:"success",data:resultant})
 		}
 	})
+})
+
+app.post("/users/getMessages",async ({body:{username1,username2,n}},res)=>{
+	const parts = [username1, username2].sort();
+	const result = await Conversation.findOne({participants:parts});
+	res.json({log:result})
+})
+
+app.post("/users/addMessage",async ({body:{sender,receiver,message}},res)=>{
+	//Encrypt message here.
+	try{
+	const parts = [sender,receiver].sort();
+	const result = await Conversation.findOne({participants:parts});
+	const messageObj = {
+		sender:sender,
+		receiver:receiver,
+		message:message
+	}
+	console.log(messageObj)
+	result.log.push(messageObj);
+	result.save()
+	res.json({message:"Added message to log",type:"success"})
+	}catch(err){
+		res.json({message:`Error adding message to log : ${err}`,type:"error"})
+	}
 })
 //
 mongoose.connect(process.env.DB_CONNECTION,{

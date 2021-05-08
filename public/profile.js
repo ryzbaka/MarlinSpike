@@ -109,8 +109,35 @@ function fetchContacts(username){
             contactText.innerText = el;
             contactContainer.appendChild(contactText);
             contactsContainer.appendChild(contactContainer);
-        
+            contactContainer.addEventListener("click",contactButtonHandler);
         })
+    })
+}
+function contactButtonHandler(e){
+    const contactName = e.target.innerText;
+    const username = localStorage.getItem("marlinspike-username");
+    const data = {
+        username1: username,
+        username2: contactName,
+        n:5
+    }
+    axios.post("/users/getMessages",data).then(({data})=>{
+        transcriptContainer.innerHTML = ""
+        const log = data.log.log;
+        log.forEach(({sender,receiver,message},index)=>{
+            const messageContainer = document.createElement("div");
+            if(sender===localStorage.getItem("marlinspike-username")){
+                messageContainer.classList.add("sent-message")
+            }else{
+                messageContainer.classList.add("received-message")
+            }
+            const messageText = document.createElement("p");
+            messageText.innerText =sender+": "+message;
+            messageContainer.appendChild(messageText);
+            transcriptContainer.appendChild(messageContainer)
+        })
+        transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+        // console.log(data.log.log)
     })
 }
 addContactButton.addEventListener("click",addContact)
