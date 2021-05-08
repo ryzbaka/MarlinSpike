@@ -5265,6 +5265,12 @@ socket.on("connect",()=>{
 })
 socket.on("disconnect",()=>swal.fire("Disconnected from Marlinspike servers.","Check you internet connection.","error"))
 socket.on("server-sent-message",({sender,receiver,message})=>{
+    console.log(message)
+    axios.post("/users/addMessage",{
+        sender:sender,
+        receiver:receiver,
+        message:message
+    })
     if([sender,receiver].includes(currentContact)){
         if(sender===localStorage.getItem("marlinspike-username")){
             addMessageToTranscriptContainer(sender+": "+message,"sent-message");
@@ -5272,11 +5278,6 @@ socket.on("server-sent-message",({sender,receiver,message})=>{
             addMessageToTranscriptContainer(sender+": "+message,"received-message");
         }
     }
-    axios.post("/users/addMessage",{
-        sender:sender,
-        receiver:receiver,
-        message:message
-    })
 })
 
 function addMessageToTranscriptContainer(message, type){
