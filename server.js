@@ -88,7 +88,6 @@ app.post("/users/checkExists",async ({body:{username}},res)=>{
 			res.send(false)
 		}
 		if(resultant){
-			console.log(resultant)
 			res.send(true)
 		}else{
 			res.send(false)
@@ -98,7 +97,33 @@ app.post("/users/checkExists",async ({body:{username}},res)=>{
 
 app.post("/users/addContact",async ({body:{user1,user2}},res)=>{
 	//Add user to contacts of both user1 and user2
-	console.log("lmao.")
+	console.log(`User1 : ${user1}`);
+	console.log(`User2 : ${user2}`);
+	// console.log("lmao.")
+	User.findOne({username:user1}).exec((err,resultant)=>{
+		if(resultant){
+			resultant.contacts.push(user2);
+			resultant.save();
+		}
+	});
+	User.findOne({username:user2}).exec((err,resultant)=>{
+		if(resultant){
+			resultant.contacts.push(user1);
+			resultant.save();
+		}
+	});
+	res.json({message:"Done.",type:"success"})
+})
+
+app.post("/users/getContacts",({body:{username}},res)=>{
+	User.findOne({username:username}).exec((err,resultant)=>{
+		if(err){
+			res.json({message:err,type:"error"})
+		}
+		if(resultant){
+			res.json({message:"Fetched contacts",type:"success",data:resultant})
+		}
+	})
 })
 //
 mongoose.connect(process.env.DB_CONNECTION,{
