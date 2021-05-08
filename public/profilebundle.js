@@ -5242,6 +5242,7 @@ const addContactButton = document.querySelector(".add-contact-button")
 const transcriptContainer = document.querySelector(".transcript-container");
 const contactsContainer = document.querySelector(".contacts-container");
 transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+let currentContact="null";
 
 let socket;
 if(localStorage.getItem("marlinspike-username")===null){
@@ -5262,7 +5263,21 @@ logoutbtn.addEventListener("click",logout);
 socket.on("connect",()=>{
     socket.emit("connected-to-server",{username:localStorage.getItem("marlinspike-username")})
 })
-
+socket.on("disconnect",()=>swal.fire("Disconnected from Marlinspike servers.","Check you internet connection.","error"))
+socket.on("server-sent-message",({sender,receiver,message})=>{
+    if([sender,receiver].includes(currentContact)){
+        if(sender===localStorage.getItem("marlinspike-username")){
+            addMessageToTranscriptContainer(sender+": "+message,"sent-message");
+        }else{
+            addMessageToTranscriptContainer(sender+": "+message,"received-message");
+        }
+    }
+    axios.post("/users/addMessage",{
+        sender:sender,
+        receiver:receiver,
+        message:message
+    })
+})
 
 function addMessageToTranscriptContainer(message, type){
     const messageContainer = document.createElement("div");
@@ -5276,10 +5291,10 @@ function addMessageToTranscriptContainer(message, type){
 
 sendMessageButton.addEventListener("click",()=>{
     const messageText = messageInput.value;
-    addMessageToTranscriptContainer(messageText,"sent-message")
+    // addMessageToTranscriptContainer(messageText,"sent-message")
     socket.emit("client-sent-message",{
         sender:localStorage.getItem("marlinspike-username"),
-        receiver:"Alice",
+        receiver:currentContact,
         message:messageText
     })
 })
@@ -5354,6 +5369,7 @@ function contactButtonHandler(e){
         username2: contactName,
         n:5
     }
+    currentContact = contactName;
     axios.post("/users/getMessages",data).then(({data})=>{
         transcriptContainer.innerHTML = ""
         const log = data.log.log;
@@ -5370,7 +5386,7 @@ function contactButtonHandler(e){
             transcriptContainer.appendChild(messageContainer)
         })
         transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
-        // console.log(data.log.log)
+        socket.emit("join-contact-room",{username1:localStorage.getItem("marlinspike-username"),username2:contactName});
     })
 }
 addContactButton.addEventListener("click",addContact)

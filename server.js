@@ -27,7 +27,15 @@ io.sockets.on('connection',(socket)=>{
 	console.log(`connected to socket client instance ${socket.id}`);
 	socket.on("connected-to-server",({username})=>console.log(`connected to frontend : ${username}`));	
 	socket.on("client-sent-message",({sender,receiver,message})=>{
-		console.log(`${sender} sent a message to ${receiver} : ${message}`);
+		const roomName = [sender,receiver].sort().join("");
+		console.log(`${sender} sent a message to ${receiver} on ${roomName}: ${message}`);
+		io.to(roomName).emit("server-sent-message",{sender:sender,receiver:receiver,message:message})
+	})
+	socket.on("join-contact-room",({username1, username2})=>{
+		const roomName = [username1,username2].sort().join("");
+		console.log(`Received request from ${username1} to join room : ${roomName}`);
+		socket.join(roomName);
+		console.log(`${username1} joined room : ${roomName}`);
 	})
 });
 //ROUTES FOR SERVING HTML FILES
