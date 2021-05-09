@@ -20,6 +20,7 @@ function validateForm(){
         swal(message,"",messagetype).then((response)=>{
             if(message==="Authentication successful."){
             localStorage.setItem("marlinspike-username",username)
+            localStorage.setItem("marlinspike-password",password)
             window.location.replace("/profile");
         }
         })

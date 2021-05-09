@@ -141,6 +141,7 @@ app.post("/users/getContacts",({body:{username}},res)=>{
 })
 
 app.post("/users/getMessages",async ({body:{username1,username2,n}},res)=>{
+	//decrypt message here.
 	const parts = [username1, username2].sort();
 	const result = await Conversation.findOne({participants:parts});
 	res.json({log:result})
