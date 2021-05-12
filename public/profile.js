@@ -1,5 +1,9 @@
 const swal = require("sweetalert2")
 const axios = require("axios")
+const levelup = require("levelup")
+const leveljs = require("level-js")
+
+const db = levelup(leveljs('test.db',{valueEncoding:'json'}));
 
 const profileHeader = document.getElementById("profile-name");
 const logoutbtn = document.querySelector(".logout-button");
@@ -109,7 +113,7 @@ function updateContacts(){
 function fetchContacts(username){
     axios.post("/users/getContacts",{username:username})
     .then(({data})=>{
-        const raw_contacts = data.data.contacts;
+        const raw_contacts = data.data.contacts.map(o=>o.username);
         const distinct = (value,index,self)=>{
             return self.indexOf(value)==index;
         }
@@ -156,6 +160,26 @@ function contactButtonHandler(e){
         })
         transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
         socket.emit("join-contact-room",{username1:localStorage.getItem("marlinspike-username"),username2:contactName});
+    })
+    verifyKeyChain();
+
+}
+async function verifyKeyChain(){
+    db.get(`secret-${currentContact}`,{asBuffer:false},(err,secret)=>{
+        if(err){
+            axios.post("/fetchKey",{username1:localStorage.getItem("marlinspike-username"),username2:currentContact}).then(({data:{key}})=>{
+                db.put(`secret-${currentContact}`,key,err=>{
+                    if(err){
+                        console.log(err)
+                    }else{
+                        console.log(`[fetched from db] Your key for communicating with ${currentContact} is : ${key}`);
+                        swal.fire(`Set secure chat with ${currentContact}`,`Please note that you can only read and send messages from this browser.`,`info`)
+                    }
+                })
+            })     
+        }else{
+            console.log(`[fetched from level] Your key for communicating with ${currentContact} is : ${secret}`)
+        }
     })
 }
 addContactButton.addEventListener("click",addContact)

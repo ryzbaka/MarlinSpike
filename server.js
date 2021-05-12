@@ -247,6 +247,19 @@ app.post("/users/addMessage",async ({body:{sender,receiver,message}},res)=>{
 		res.json({message:`Error adding message to log : ${err}`,type:"error"})
 	}
 })
+
+app.post("/fetchKey",async ({body:{username1,username2}},res)=>{
+	//username1 is always going to be the one who's private key you want.
+	const parts = [username1,username2].sort();
+	const keys = await Key.findOne({participants:parts});
+	let required_key;
+	if(keys.privateKey1.username===username1){
+		required_key = keys.privateKey1.key;
+	}else{
+		required_key = keys.privateKey2.key;
+	}
+	res.json({key:required_key})
+})
 //
 mongoose.connect(process.env.DB_CONNECTION,{
 	useNewUrlParser: true,

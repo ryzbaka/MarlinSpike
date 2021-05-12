@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const KeysSchema = mongoose.Schema({
-    participants : [String],
+    participants : [String], //sorted list of participating usernames.
     privateKey1:{
         username:String,
         key:String
