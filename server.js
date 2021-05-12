@@ -9,6 +9,7 @@ const bcrypt = require("bcryptjs");
 const server = http.createServer(app);
 const io = require('socket.io')(server);
 const helmet = require("helmet");
+const crypto = require("crypto");
 
 app.use(helmet.dnsPrefetchControl());
 app.use(helmet.xssFilter());
@@ -19,9 +20,47 @@ app.use(express.static(__dirname+"/public/"));
 // app.use(helmet()) -> currently uncommenting this line effects website's access to js libraries the website is using through CDNs.
 const User = require("./models/Users");
 const Conversation = require("./models/Conversations");
+const Key = require("./models/Keys")
+const { Console } = require('console');
 
 app.use(bodyParser.json());
 require("dotenv").config({path: path.join(__dirname,".env")});
+//Encryption Helper Functions
+function generateKeyPair(username1, username2){
+	const keyObject = {}
+	//Generating two diffie hellman object that are bound together.
+	const user1 = crypto.createDiffieHellman(256);
+	const user2 = crypto.createDiffieHellman(user1.getPrime(), user1.getGenerator());
+	//Generating keys
+	user1.generateKeys();
+	user2.generateKeys();
+	//Generating IV for AES-256
+	const shared_IV = crypto.randomBytes(16);
+	keyObject.user1 = {
+		username: username1,
+		publicKey: user1.getPublicKey().toString("hex"),
+		privateKey: user1.getPrivateKey().toString("hex"),
+		IV: shared_IV.toString("hex")
+	}
+	keyObject.user2 = {
+		username: username2,
+		publicKey: user2.getPublicKey().toString("hex"),
+		privateKey: user2.getPrivateKey().toString("hex"),
+		IV: shared_IV.toString("hex")
+	}
+	const shared_secret_1 = user1.computeSecret(Buffer.from(keyObject.user2.publicKey,"hex"));
+	const shared_secret_2 = user2.computeSecret(Buffer.from(keyObject.user1.publicKey,"hex"));
+	if(shared_secret_1.toString("hex")==shared_secret_2.toString("hex")){
+	console.log("Key-pair generation successful");
+	console.log(keyObject);
+	}
+	return keyObject
+}
+//Encrpytion test routes
+app.get("/testKeyPairGeneration",(req,res)=>{
+	generateKeyPair("testuser1","tesruser2");
+	res.send("done.")
+})
 //Sockets
 io.sockets.on('connection',(socket)=>{
 	console.log(`connected to socket client instance ${socket.id}`);
@@ -107,25 +146,68 @@ app.post("/users/checkExists",async ({body:{username}},res)=>{
 app.post("/users/addContact",async ({body:{user1,user2,flush}},res)=>{
 	const user1_contacts = await User.findOne({username:user1});
 	const user2_contacts = await User.findOne({username:user2});
-	// user1_contacts.contacts.push(user2);
-	// user2_contacts.contacts.push(user1);
+	//1)Generate key pair for user1 and user2 (diffie hellman)
+	//2) Temporarily store key pair in mongodb.
+	//3) Whenever a user tries to talk to someone for the first time by clicking their name in the contacts, the 
+	// following things will get stored on their local leveldb database:
+	// * Their private key from the key pair
+	// After a user obtains their private key from mongo, that particular key will be deleted.
+	// When both users have obtained their key, their private keys will be deleted.
+	// Each user will store their own and their contact's public keys with them in MongoDB (revamp contacts object)
+	// Will have to convert contacts an array of contact objects which contain their username and their public key.
+	// Will have to add a model that temporarily stores private keys and a secure post request to fetch the same.
+	// When a user clicks a new contact, marlinspike will look for the private key in the browser. If its not there, it will 
+	// try fetching from the temp secret key storage model, if still not found, raise error that private key not found.
+	// Once a user has their contact's public key, their own public key and private key they will obtain the shared secret key. 
+	// This secret key will be use to encrypt and decrypt shared secret keys.
+	// This gonna take a while boyo :), probably a whole day,
 	if(flush){
+		//flush deletes both user's contacts (this feature is only for developer convenience and should be removed in production)
 		user1_contacts.contacts = [];
 		user2_contacts.contacts = [];
 	}else{
-	if(!user1_contacts.contacts.includes(user2)){
-		user1_contacts.contacts.push(user2);
-		user2_contacts.contacts.push(user1);
-		const newConversation = new Conversation({
-			participants :[user1,user2].sort(),
-			log:[]
-		})
-		console.log(newConversation)
-		newConversation.save();
-		}
+		const keyPairObject = await generateKeyPair(user1,user2);
+		// const newConversation = new Conversation({
+		// 	participants :[user1,user2].sort(),
+		// 	log:[]
+		// })
+		// console.log(newConversation)
+		// newConversation.save();
+		console.log("no new users added.")
+		console.log("Key pair generated.")
+		// console.log(keyPairObject)
+		const contact1 = {
+				username:keyPairObject.user2.username,
+				contactPublicKey:keyPairObject.user2.publicKey,
+				userPublicKey:keyPairObject.user1.publicKey,
+				sharedIV:keyPairObject.user2.IV
+		}//contact to be added to user1's contacts
+		const contact2 = {
+			username:keyPairObject.user1.username,
+			contactPublicKey:keyPairObject.user1.publicKey,
+			userPublicKey:keyPairObject.user2.publicKey,
+			sharedIV:keyPairObject.user1.IV
+		}//contact to be added to user2's contacts
+		user1_contacts.contacts.push(contact1);
+		user2_contacts.contacts.push(contact2)
+		console.log(user2_contacts)
+		console.log(user1_contacts)
+		const secretKeys = new Key({
+			participants : [user1,user2].sort(),
+			privateKey1:{
+				username:user1,
+				key:keyPairObject.user1.privateKey
+			},
+			privateKey2:{
+				username:user2,
+				key:keyPairObject.user2.privateKey
+			}
+		});
+		console.log(secretKeys)
+		user1_contacts.save();
+		user2_contacts.save();
+		secretKeys.save()
 	}
-	user1_contacts.save()
-	user2_contacts.save()
 	res.json({message:"Done.",type:"success"})
 })
 

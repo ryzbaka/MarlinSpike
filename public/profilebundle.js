@@ -5288,6 +5288,7 @@ function addMessageToTranscriptContainer(message, type){
 sendMessageButton.addEventListener("click",()=>{
     const messageText = messageInput.value;
     // addMessageToTranscriptContainer(messageText,"sent-message")
+    // query receiver's public key and then encrypt
     axios.post("/users/addMessage",{
         sender:localStorage.getItem("marlinspike-username"),
         receiver:currentContact,
