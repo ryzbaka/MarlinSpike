@@ -40,13 +40,17 @@ function generateKeyPair(username1, username2){
 		username: username1,
 		publicKey: user1.getPublicKey().toString("hex"),
 		privateKey: user1.getPrivateKey().toString("hex"),
-		IV: shared_IV.toString("hex")
+		IV: shared_IV.toString("hex"),
+		prime:user1.getPrime().toString("hex"),
+		generator:user1.getGenerator().toString("hex")
 	}
 	keyObject.user2 = {
 		username: username2,
 		publicKey: user2.getPublicKey().toString("hex"),
 		privateKey: user2.getPrivateKey().toString("hex"),
-		IV: shared_IV.toString("hex")
+		IV: shared_IV.toString("hex"),
+		prime:user1.getPrime().toString("hex"),
+		generator:user1.getGenerator().toString("hex")
 	}
 	const shared_secret_1 = user1.computeSecret(Buffer.from(keyObject.user2.publicKey,"hex"));
 	const shared_secret_2 = user2.computeSecret(Buffer.from(keyObject.user1.publicKey,"hex"));
@@ -167,12 +171,12 @@ app.post("/users/addContact",async ({body:{user1,user2,flush}},res)=>{
 		user2_contacts.contacts = [];
 	}else{
 		const keyPairObject = await generateKeyPair(user1,user2);
-		// const newConversation = new Conversation({
-		// 	participants :[user1,user2].sort(),
-		// 	log:[]
-		// })
-		// console.log(newConversation)
-		// newConversation.save();
+		const newConversation = new Conversation({
+			participants :[user1,user2].sort(),
+			log:[]
+		})
+		console.log(newConversation)
+		newConversation.save();
 		console.log("no new users added.")
 		console.log("Key pair generated.")
 		// console.log(keyPairObject)
@@ -180,13 +184,17 @@ app.post("/users/addContact",async ({body:{user1,user2,flush}},res)=>{
 				username:keyPairObject.user2.username,
 				contactPublicKey:keyPairObject.user2.publicKey,
 				userPublicKey:keyPairObject.user1.publicKey,
-				sharedIV:keyPairObject.user2.IV
+				sharedIV:keyPairObject.user2.IV,
+				sharedPrime:keyPairObject.user1.prime,
+				sharedGenerator:keyPairObject.user1.generator
 		}//contact to be added to user1's contacts
 		const contact2 = {
 			username:keyPairObject.user1.username,
 			contactPublicKey:keyPairObject.user1.publicKey,
 			userPublicKey:keyPairObject.user2.publicKey,
-			sharedIV:keyPairObject.user1.IV
+			sharedIV:keyPairObject.user1.IV,
+			sharedPrime:keyPairObject.user2.prime,
+			sharedGenerator:keyPairObject.user2.generator
 		}//contact to be added to user2's contacts
 		user1_contacts.contacts.push(contact1);
 		user2_contacts.contacts.push(contact2)
@@ -259,6 +267,18 @@ app.post("/fetchKey",async ({body:{username1,username2}},res)=>{
 		required_key = keys.privateKey2.key;
 	}
 	res.json({key:required_key})
+})
+
+app.post("/fetchPublicKey",async ({body:{username1,username2}},res)=>{
+	//username1 is always going to be from localStorage.
+	const result = await User.findOne({username:username1});
+	for(let i=0;i<result.contacts.length;i++){
+		if(result.contacts[i].username==username2){
+			res.json(result.contacts[i])
+		}else if(i==result.contacts.length-1){
+			res.json({message:"Contact not found."})
+		}
+	}
 })
 //
 mongoose.connect(process.env.DB_CONNECTION,{

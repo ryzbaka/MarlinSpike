@@ -7,7 +7,9 @@ const UsersSchema = mongoose.Schema({
         username: String,
         contactPublicKey: String,
         userPublicKey: String,
-        sharedIV:String
+        sharedIV:String,
+        sharedPrime:String,
+        sharedGenerator:String
     }]
 });
 

@@ -2,6 +2,7 @@ const swal = require("sweetalert2")
 const axios = require("axios")
 const levelup = require("levelup")
 const leveljs = require("level-js")
+const crypto = require("crypto")
 
 const db = levelup(leveljs('test.db',{valueEncoding:'json'}));
 
@@ -14,6 +15,7 @@ const transcriptContainer = document.querySelector(".transcript-container");
 const contactsContainer = document.querySelector(".contacts-container");
 transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
 let currentContact="null";
+let currentSecret = "null";
 
 let socket;
 if(localStorage.getItem("marlinspike-username")===null){
@@ -56,10 +58,14 @@ function addMessageToTranscriptContainer(message, type){
     transcriptContainer.scrollTop=transcriptContainer.scrollHeight;
 }
 
-sendMessageButton.addEventListener("click",()=>{
+sendMessageButton.addEventListener("click",async ()=>{
     const messageText = messageInput.value;
+    const encryptedText = await encryptMessage(messageText);
     // addMessageToTranscriptContainer(messageText,"sent-message")
     // query receiver's public key and then encrypt
+    //messageText has to get encrypted using current secret here
+    //check if currentContact and currentSecret are not null
+    if((currentContact!="null")&&(currentSecret!="null")){
     axios.post("/users/addMessage",{
         sender:localStorage.getItem("marlinspike-username"),
         receiver:currentContact,
@@ -70,6 +76,9 @@ sendMessageButton.addEventListener("click",()=>{
         receiver:currentContact,
         message:messageText
     })
+}else{
+    swal.fire("Did not send message, check currentContact and currentSecret","This is a developer error,","error")
+}
 })
 
 async function addContact(){
@@ -145,6 +154,7 @@ function contactButtonHandler(e){
     currentContact = contactName;
     axios.post("/users/getMessages",data).then(({data})=>{
         transcriptContainer.innerHTML = ""
+        // console.log(data)
         const log = data.log.log;
         log.forEach(({sender,receiver,message},index)=>{
             const messageContainer = document.createElement("div");
@@ -159,27 +169,43 @@ function contactButtonHandler(e){
             transcriptContainer.appendChild(messageContainer)
         })
         transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
-        socket.emit("join-contact-room",{username1:localStorage.getItem("marlinspike-username"),username2:contactName});
+        console.log(`emitting join contact room for ${currentContact}`)
     })
+    socket.emit("join-contact-room",{username1:localStorage.getItem("marlinspike-username"),username2:contactName});
     verifyKeyChain();
 
 }
 async function verifyKeyChain(){
-    db.get(`secret-${currentContact}`,{asBuffer:false},(err,secret)=>{
+    db.get(`secret-${currentContact}-${localStorage.getItem("marlinspike-username")}`,{asBuffer:false},(err,secret)=>{
         if(err){
             axios.post("/fetchKey",{username1:localStorage.getItem("marlinspike-username"),username2:currentContact}).then(({data:{key}})=>{
-                db.put(`secret-${currentContact}`,key,err=>{
+                db.put(`secret-${currentContact}-${localStorage.getItem("marlinspike-username")}`,key,err=>{
                     if(err){
                         console.log(err)
                     }else{
                         console.log(`[fetched from db] Your key for communicating with ${currentContact} is : ${key}`);
-                        swal.fire(`Set secure chat with ${currentContact}`,`Please note that you can only read and send messages from this browser.`,`info`)
+                        currentSecret = key;
+                        swal.fire(`Set up secure chat with ${currentContact}`,`Please note that you can only read and send messages from this browser.`,`info`)
                     }
                 })
             })     
         }else{
             console.log(`[fetched from level] Your key for communicating with ${currentContact} is : ${secret}`)
+            currentSecret = secret;
         }
     })
 }
 addContactButton.addEventListener("click",addContact)
+
+async function encryptMessage(text){
+    const secretKey = currentSecret;
+    const {data:{userPublicKey,contactPublicKey,sharedIV,sharedPrime,sharedGenerator}} = await axios.post("/fetchPublicKey",{
+        username1:localStorage.getItem("marlinspike-username"),
+        username2:currentContact
+    });
+    const dfObject = crypto.createDiffieHellman(Buffer.from(sharedPrime,"hex"),Buffer.from(sharedGenerator,"hex"));
+    dfObject.setPublicKey(Buffer.from(userPublicKey,"hex"));//our public key for this conversation
+    dfObject.setPrivateKey(Buffer.from(secretKey,"hex"));//our private key for this conversation
+    console.log(dfObject.computeSecret(Buffer.from(contactPublicKey,"hex")).toString("hex"))
+
+}
