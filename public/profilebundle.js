@@ -11273,18 +11273,19 @@ socket.on("connect",()=>{
     socket.emit("connected-to-server",{username:localStorage.getItem("marlinspike-username")})
 })
 socket.on("disconnect",()=>swal.fire("Disconnected from Marlinspike servers.","Check you internet connection.","error"))
-socket.on("server-sent-message",({sender,receiver,message})=>{
-    console.log(message)
+socket.on("server-sent-message",async ({sender,receiver,message})=>{
+    console.log(`message from server :${message}`);
+    const decrypted = await decryptMessage(message);
     if([sender,receiver].includes(currentContact)){
         if(sender===localStorage.getItem("marlinspike-username")){
-            addMessageToTranscriptContainer(sender+": "+message,"sent-message");
+            addMessageToTranscriptContainer(sender+": "+decrypted,"sent-message");
         }else{
-            addMessageToTranscriptContainer(sender+": "+message,"received-message");
+            addMessageToTranscriptContainer(sender+": "+decrypted,"received-message");
         }
     }
 })
 
-function addMessageToTranscriptContainer(message, type){
+async function addMessageToTranscriptContainer(message, type){
     const messageContainer = document.createElement("div");
     messageContainer.classList.add(type);
     const messageText = document.createElement("p");
@@ -11305,12 +11306,12 @@ sendMessageButton.addEventListener("click",async ()=>{
     axios.post("/users/addMessage",{
         sender:localStorage.getItem("marlinspike-username"),
         receiver:currentContact,
-        message:messageText
+        message:encryptedText
     })
     socket.emit("client-sent-message",{
         sender:localStorage.getItem("marlinspike-username"),
         receiver:currentContact,
-        message:messageText
+        message:encryptedText
     })
 }else{
     swal.fire("Did not send message, check currentContact and currentSecret","This is a developer error,","error")
@@ -11392,7 +11393,7 @@ function contactButtonHandler(e){
         transcriptContainer.innerHTML = ""
         // console.log(data)
         const log = data.log.log;
-        log.forEach(({sender,receiver,message},index)=>{
+        log.forEach(async ({sender,receiver,message},index)=>{
             const messageContainer = document.createElement("div");
             if(sender===localStorage.getItem("marlinspike-username")){
                 messageContainer.classList.add("sent-message")
@@ -11400,16 +11401,16 @@ function contactButtonHandler(e){
                 messageContainer.classList.add("received-message")
             }
             const messageText = document.createElement("p");
-            messageText.innerText =sender+": "+message;
+            const decryptedmessage = await decryptMessage(message)
+            messageText.innerText =sender+": "+decryptedmessage;
             messageContainer.appendChild(messageText);
             transcriptContainer.appendChild(messageContainer)
         })
-        transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
         console.log(`emitting join contact room for ${currentContact}`)
     })
     socket.emit("join-contact-room",{username1:localStorage.getItem("marlinspike-username"),username2:contactName});
+    transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
     verifyKeyChain();
-
 }
 async function verifyKeyChain(){
     db.get(`secret-${currentContact}-${localStorage.getItem("marlinspike-username")}`,{asBuffer:false},(err,secret)=>{
@@ -11430,9 +11431,24 @@ async function verifyKeyChain(){
             currentSecret = secret;
         }
     })
+    transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
 }
 addContactButton.addEventListener("click",addContact)
 
+async function decryptMessage(encrypted_text){
+    const secretKey = currentSecret;
+    const {data:{userPublicKey,contactPublicKey,sharedIV,sharedPrime,sharedGenerator}} = await axios.post("/fetchPublicKey",{
+        username1:localStorage.getItem("marlinspike-username"),
+        username2:currentContact
+    });
+    const dfObject = crypto.createDiffieHellman(Buffer.from(sharedPrime,"hex"),Buffer.from(sharedGenerator,"hex"));
+    dfObject.setPublicKey(Buffer.from(userPublicKey,"hex"));//our public key for this conversation
+    dfObject.setPrivateKey(Buffer.from(secretKey,"hex"));//our private key for this conversation
+    const sharedSecret=dfObject.computeSecret(Buffer.from(contactPublicKey,"hex"))
+    const decipher = crypto.createDecipheriv("aes-256-cbc",sharedSecret,Buffer.from(sharedIV,"hex"));
+    let decrypted = decipher.update(encrypted_text,'base64','utf8');
+    return (decrypted+decipher.final("utf8"))
+}
 async function encryptMessage(text){
     const secretKey = currentSecret;
     const {data:{userPublicKey,contactPublicKey,sharedIV,sharedPrime,sharedGenerator}} = await axios.post("/fetchPublicKey",{
@@ -11442,8 +11458,13 @@ async function encryptMessage(text){
     const dfObject = crypto.createDiffieHellman(Buffer.from(sharedPrime,"hex"),Buffer.from(sharedGenerator,"hex"));
     dfObject.setPublicKey(Buffer.from(userPublicKey,"hex"));//our public key for this conversation
     dfObject.setPrivateKey(Buffer.from(secretKey,"hex"));//our private key for this conversation
-    console.log(dfObject.computeSecret(Buffer.from(contactPublicKey,"hex")).toString("hex"))
-
+    const sharedSecret=dfObject.computeSecret(Buffer.from(contactPublicKey,"hex"))
+    //add aes-256 encryption using shared secret to return encrypted hex. 
+    let  cipher = crypto.createCipheriv("aes-256-cbc",sharedSecret,Buffer.from(sharedIV,"hex"));
+    let encryptedMessage = cipher.update(text,"utf8","base64");
+    encryptedMessage+=cipher.final("base64");
+    // console.log(encryptedMessage)
+    return encryptedMessage
 }
 }).call(this)}).call(this,require("buffer").Buffer)
 },{"axios":6,"buffer":146,"crypto":156,"level-js":58,"levelup":68,"sweetalert2":75}],78:[function(require,module,exports){
