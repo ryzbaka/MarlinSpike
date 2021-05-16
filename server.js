@@ -262,9 +262,22 @@ app.post("/fetchKey",async ({body:{username1,username2}},res)=>{
 	const keys = await Key.findOne({participants:parts});
 	let required_key;
 	if(keys.privateKey1.username===username1){
-		required_key = keys.privateKey1.key;
+		if (keys.privateKey1.key!="taken"){
+			required_key = keys.privateKey1.key;
+			keys.privateKey1.key = "taken";
+			keys.save();
+		}else{
+			required_key = keys.privateKey1.key;
+		}
 	}else{
-		required_key = keys.privateKey2.key;
+		// required_key = keys.privateKey2.key;
+		if (keys.privateKey2.key!="taken"){
+			required_key = keys.privateKey2.key;
+			keys.privateKey2.key = "taken";
+			keys.save();
+		}else{
+			required_key = keys.privateKey2.key;
+		}
 	}
 	res.json({key:required_key})
 })

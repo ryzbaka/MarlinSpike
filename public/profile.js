@@ -186,8 +186,13 @@ async function verifyKeyChain(){
                         console.log(err)
                     }else{
                         console.log(`[fetched from db] Your key for communicating with ${currentContact} is : ${key}`);
-                        currentSecret = key;
-                        swal.fire(`Set up secure chat with ${currentContact}`,`Please note that you can only read and send messages from this browser.`,`info`)
+                        if(key=="taken"){
+                            currentSecret = "null";
+                            swal.fire("Secret key taken.",`Cannot communicate with ${currentContact} from this browser.`,'error')
+                        }else{
+                            currentSecret = key;
+                            swal.fire(`Set up secure chat with ${currentContact}`,`Please note that you can only read and send messages from this browser.`,`info`)
+                        }
                     }
                 })
             })     
